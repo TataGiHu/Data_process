@@ -89,21 +89,20 @@ class DataGenerator():
             the_distance = math.sqrt(math.pow(cur_point[0] - last_point[0],2) + 
                                         math.pow(cur_point[1] - last_point[1],2))
             the_front_distance += the_distance
-            if the_back_distance > abs(self.gt_scope_end):
+            if the_front_distance > abs(self.gt_scope_end):
+               
               break
             j+=1  
-
           the_front_index = j #
     
           for j in range(the_back_index, the_front_index+1):
             car_point = reference_line_points[j]["car_point"]
             all_points_x.append(car_point[0])
             all_points_y.append(car_point[1])
-
+          
           coeff = np.polyfit(all_points_x, all_points_y, 2) 
           gt_coeff = coeff.tolist()
           gt_coeff.reverse()
-
           return gt_coeff
 
     return []
