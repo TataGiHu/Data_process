@@ -14,6 +14,7 @@ from helper.io_helper import split_data, read_files, read_dir, write_list
 
 
 CAMERA_SOURCE_FRONT_MID = 1
+FEATURE_TYPE = "coeff"
 
 def is_ignore_vision_lane(vision_lane):
   return (vision_lane["is_failed_3d"] or vision_lane["is_centerline"] or 
@@ -31,6 +32,7 @@ class DataGenerator():
     self.gt_scope_start = -20
     self.gt_scope_end = 80
     self.data_info = {
+      "type": FEATURE_TYPE,
       "feature": "ax^2 + bx + c",
       "feature_size": self.feature_size,
       "n_frame": self.n_frame,
@@ -48,6 +50,7 @@ class DataGenerator():
 
 
   def generate_gt(self, wm_lanes):
+    gt = []
     for wm_lane in wm_lanes:
       if wm_lane["relative_id"] == 0:
         reference_line_points = wm_lane["reference_line"]["reference_line_points"]
@@ -103,9 +106,10 @@ class DataGenerator():
           coeff = np.polyfit(all_points_x, all_points_y, 2) 
           gt_coeff = coeff.tolist()
           gt_coeff.reverse()
-          return gt_coeff
+          gt.append(gt_coeff)
+          return gt
 
-    return []
+    return gt
 
   def generate_vision_enu_point(self, vision_lane) :
 
