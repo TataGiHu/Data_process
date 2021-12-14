@@ -11,7 +11,9 @@ import argparse
 import numpy as np
 from multiprocessing import Pool
 from helper import message_converter
-from helper.io_helper import save_json, read_files, read_dir, write_list, split_data
+from helper.io_helper import save_json, read_files, \
+  read_dir, write_list, split_data, make_dirs
+from helper.image_helper import *
 
 
 
@@ -105,7 +107,7 @@ def process_egopose(msg, all_egopose):
 
   pass
 
-def extract_data(bag_file, save_root):
+def extract_data(bag_file, save_root, extract_image):
 
   bag = rosbag.Bag(bag_file)
   bag_name = os.path.basename(bag_file).split('.')[0]
@@ -117,10 +119,18 @@ def extract_data(bag_file, save_root):
   vision_lane_topic = "/perception/vision/lane"
   worldmodel_topic = "/worldmodel/processed_map"
   egopose_topic = "/mla/egopose"
+  image_topic = "/sensor/camera_front_mid/cylinder/image_raw/compressed"
 
   topic_names = [vision_lane_topic, worldmodel_topic, egopose_topic]
-
-  # 1. extract  the topic msg
+  image_save_root = None
+  bridge = None
+  if extract_image:
+    topic_names.append(image_topic)
+    image_dir = "_".join(image_topic.split("/")[1:])
+    image_save_root = os.path.join(save_root, bag_name, image_dir)
+    make_dirs(image_save_root)
+    bridge = CvBridge()
+    # 1. extract  the topic msg
   for topic, msg, ts in bag.read_messages(topics=topic_names): 
 
     data_json = message_converter.convert_ros_message_to_dictionary(msg)
@@ -131,6 +141,13 @@ def extract_data(bag_file, save_root):
       all_wm_lane.append(data_json)
     elif topic == egopose_topic:
       all_egopose.append(data_json) 
+    elif topic == image_topic:
+      if bridge and image_save_root:
+        sec = msg.header.stamp.secs
+        nsec = msg.header.stamp.nsecs
+        stamp = str(sec).zfill(10)+ str(nsec).zfill(9)[:-3]
+        img_name = os.path.join(image_save_root, stamp+".jpg")
+        save_img_compressed(bridge, msg, img_name)
 
 
   # 2. align the msg  
@@ -151,7 +168,7 @@ def extract_data(bag_file, save_root):
 
   size_wm, size_egopose, size_vision_lane = len(all_wm_lane), len(all_egopose), len(all_vision_lane)
   tolerate_size = 10
-  print("size_wm:{}, size_egopose:{},  size_vision_lane:{}", size_wm, size_egopose, size_vision_lane)
+  print("size_wm:{}, size_egopose:{},  size_vision_lane:{}".format(size_wm, size_egopose, size_vision_lane))
 
   if size_wm <= tolerate_size or size_egopose <= tolerate_size or size_vision_lane <= tolerate_size:
     return
@@ -191,10 +208,6 @@ def extract_data(bag_file, save_root):
         continue
       break
 
-    #if i >= 566:
-    #  from IPython import embed
-    #  embed() 
-
     the_vision_lane = all_vision_lane[k-1]
     if abs(the_vision_lane["meta"]["sensor_timestamp_us"] - wm_timestamp_us)  > max_time_diff:
       # the vision lane can disappear
@@ -221,12 +234,12 @@ def extract_data(bag_file, save_root):
   write_list(save_file, the_all_aligned_result)
 
 
-def main(i, bag_list, save_root):
+def main(i, bag_list, save_root, extract_image):
 
   for j, bag_file in enumerate(bag_list):
     if 0:
       try:
-        extract_data(bag_file, save_root)
+        extract_data(bag_file, save_root, extract_image)
 
       except Exception as e:
         print("error bag: {}".format(bag_file))
@@ -234,11 +247,11 @@ def main(i, bag_list, save_root):
       if i == 0:
         print("parse {} : {}".format(j, bag_file))
     else:
-      extract_data(bag_file, save_root)
+      extract_data(bag_file, save_root, extract_image)
 
 
 
-def mpl_call(bag_dir, save_root) :
+def mpl_call(bag_dir, save_root, extract_image) :
   n_task = 8
   p = Pool(n_task)
 
@@ -249,7 +262,7 @@ def mpl_call(bag_dir, save_root) :
 
   for i in range(n_task):
     data = splited_data[i]
-    res = p.apply_async(main, args=(i, data, save_root))
+    res = p.apply_async(main, args=(i, data, save_root, extract_image))
     ress.append(res)
 
   p.close()
@@ -262,9 +275,9 @@ def mpl_call(bag_dir, save_root) :
   print("parse {} done".format(bag_dir))
 
 
-def single_call(bag_dir, save_root) :
+def single_call(bag_dir, save_root, extract_image) :
   bags = read_dir(bag_dir)
-  main(0, bags, save_root)
+  main(0, bags, save_root, extract_image)
 
 
 
@@ -274,15 +287,17 @@ if __name__ == "__main__":
   parser = argparse.ArgumentParser(description="Process args.")
   parser.add_argument('--bag_dir', '-b', required=True, help='bag name')
   parser.add_argument('--save_root', '-s', required=True, help="save folder")
+  parser.add_argument('--extract_image',  action='store_true', default=False)
 
   args = parser.parse_args()
   bag_dir= args.bag_dir
   save_root = args.save_root
+  extract_image = args.extract_image
 
   mpl_enable = False
 
   if mpl_enable: 
-    mpl_call(bag_dir, save_root)
+    mpl_call(bag_dir, save_root, extract_image)
   else:
-    single_call(bag_dir, save_root)
+    single_call(bag_dir, save_root, extract_image)
 

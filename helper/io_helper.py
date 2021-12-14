@@ -34,6 +34,9 @@ def make_dirs_if_not_exist(file_path):
   if not os.path.exists(os.path.dirname(file_path)):
     os.makedirs(os.path.dirname(file_path))
 
+def make_dirs(path):
+  if not os.path.exists(path):
+    os.makedirs(path)
 
 
 def save_json(json_path, res):

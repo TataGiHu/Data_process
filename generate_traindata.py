@@ -219,7 +219,9 @@ def main(i, file_list, save_root):
         dt = data_generator.generate_dt(i, ori_datas)
 
         train_data = {
-          "ts": egopose["meta"]["timestamp_us"],
+          "ts": {"egopose": egopose["meta"]["timestamp_us"],
+                 "vision": vision_lane["meta"]["sensor_timestamp_us"],
+                 "wm": wm["meta"]["egopose_timestamp_us"]},
           "dt": dt, 
           "gt":gt 
         } 
