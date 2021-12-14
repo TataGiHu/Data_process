@@ -41,6 +41,7 @@ class DataGenerator():
         self.step_width = 5
         self.gt_scope_end = 80
         self.data_info = {
+            "type": "points",
             "feature": "descrete points",
             "n_frame": self.n_frame,
             "gt_scope": {"start": self.gt_scope_start, "end": self.gt_scope_end, "step width" : self.step_width}
@@ -117,17 +118,15 @@ class DataGenerator():
             wm_lanes ([processedMap Lanes]): [Lanes from processedMap data]
             dt ([type]): [Descrete Lane points from vision perception]
         """
-        gt = {
-            "gt_lane_points": []
-        }
+        gt = []
         for lane in wm_lanes:
-            current_lane = []
+            if not lane["relative_id"] == 0:
+                continue
             for x in range(self.gt_scope_start, self.gt_scope_end, self.step_width):
                 output_points = np.array(self.get_closest_n_points(x, lane, 6))
                 coeff = np.polyfit(output_points[:, 0], output_points[:, 1], 2)
                 gt_lane_point = [x, get_poly_y_value(x, coeff)]
-                current_lane.append(gt_lane_point)
-            gt["gt_lane_points"].append(current_lane)
+                gt.append(gt_lane_point)
         return gt
 
     def generate_vision_enu_point(self, vision_lane):
@@ -173,7 +172,8 @@ class DataGenerator():
     def generate_dt(self, i, ori_datas):
 
         dt_lane_points = {
-            "lane_points": []
+            "lanes": [],
+            "road_edges": []
         }
         for j in range(i-self.n_frame+1, i+1):
             history_vision_lanes = ori_datas[j]["vision_lane"]["lane_perception"]["lanes"]
@@ -186,7 +186,7 @@ class DataGenerator():
                     car_point = self.cc_.enu_to_car(enu_point)
                     current_lane_points.append([car_point[0], car_point[1]])
                 frame_lane_points.append(current_lane_points)
-            dt_lane_points["lane_points"].append(frame_lane_points)
+            dt_lane_points["lanes"].append(frame_lane_points)
 
         return dt_lane_points
 
@@ -224,9 +224,14 @@ def main(i, file_list, save_root):
                 dt = data_generator.generate_dt(i, ori_datas)
 
                 gt = data_generator.generate_gt_points(wm_lanes)
+                
 
                 train_data = {
-                    "ts": egopose["meta"]["timestamp_us"],
+                    "ts": {
+                        "egopose": egopose["meta"]["timestamp_us"],
+                        "vision": vision_lane["meta"]["sensor_timestamp_us"],
+                        "wm": wm["meta"]["egopose_timestamp_us"]
+                    },
                     "dt": dt,
                     "gt": gt
                 }
