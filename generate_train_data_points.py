@@ -120,13 +120,16 @@ class DataGenerator():
         """
         gt = []
         for lane in wm_lanes:
+            current_lane = []
             if not lane["relative_id"] == 0:
+                gt.append(current_lane)
                 continue
             for x in range(self.gt_scope_start, self.gt_scope_end, self.step_width):
                 output_points = np.array(self.get_closest_n_points(x, lane, 6))
                 coeff = np.polyfit(output_points[:, 0], output_points[:, 1], 2)
                 gt_lane_point = [x, get_poly_y_value(x, coeff)]
-                gt.append(gt_lane_point)
+                current_lane.append(gt_lane_point)
+            gt.append(current_lane)
         return gt
 
     def generate_vision_enu_point(self, vision_lane):
