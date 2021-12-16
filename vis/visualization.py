@@ -23,48 +23,39 @@ matplotlib.use('TkAgg')
 
 
 class VisualizationTool:
-    lane_data = None
-    pred_data = None
-    img_folder = None
-    lane_type = None
-    pred_type = None
-    data_len = None
-    pred_len = None
-    writer = None
-    PAUSE_ON = True
-    ts_egopose = None
-    ts_vision = None
-    ts_wm = None
-    output_name = None
     
-    def __init__(self, lane_src, pred_src, img_folder, writer, PAUSE_ON):
+    def __init__(self, lane_src, pred_src, img_folder, opt_name, writer, PAUSE_ON):
         self.lane_data = self.dataProcess(lane_src)
         self.pred_data = self.dataProcess(pred_src)
         self.img_folder = img_folder
         self.data_len = len(self.lane_data)
         if self.pred_data !=None:   
             self.pred_len = len(self.pred_data)
-        feature_line = json.loads(self.lane_data[0])
-        self.lane_type = feature_line['type']
+        self.lane_type = self.lane_data[0]['type']
         if self.pred_data != None:
-            feature_pred = json.loads(self.pred_data[0])
-            self.pred_type = feature_pred['type']
+            self.pred_type = self.pred_data[0]['type']
         self.writer = writer
         self.PAUSE_ON = PAUSE_ON
         temp = lane_src.split('.')
-        self.output_name = temp[0]
+        if opt_name == None:
+            self.output_name = temp[0]
+        else:
+            self.output_name = opt_name
         
     def dataProcess(self, file_name):
         if file_name != None:
             f = open(file_name, 'r', encoding='utf-8')
-            data = f.readlines()
+            data = []
+            for line in f:
+                data.append(json.loads(line))
             f.close()
+            print(data[0])
             return data
         else:
-            pass
+            return None
     
     def currentLane(self, idx):
-        cur_lane = json.loads(self.lane_data[idx])
+        cur_lane = self.lane_data[idx]
         return cur_lane  
     
     def initTS(self, idx):
@@ -141,8 +132,8 @@ class VisualizationTool:
                         
     def showPred(self):
         for item in self.pred_data:
-            if str(self.ts_egopose) in item:
-                this_pred = json.loads(item)
+            if self.ts_egopose == item['ts']:
+                this_pred = item
                 pred = this_pred['pred']
                 if self.pred_type == 'points':
                     for line in pred:
@@ -189,16 +180,18 @@ if __name__ == "__main__":
     parser.add_argument('--lane_src', '-l', required=True, help='lane source file name')
     parser.add_argument('--pred_src', '-p', required=False, help='prediction source file name')
     parser.add_argument('--img_folder', '-i', required=False, help='image source folder')
+    parser.add_argument('--output_name', '-o', required=False, help='output video name')
     args = parser.parse_args()
     lane_src = args.lane_src
     pred_src = args.pred_src
     img_folder = args.img_folder
+    opt_name = args.output_name
 
     
     
     
     metadata = dict(title='01', artist='Matplotlib', comment='Lane fitting')
     writer = FFMpegWriter(fps=10, metadata=metadata)
-    PAUSE_ON = False
-    vis = VisualizationTool(lane_src, pred_src, img_folder, writer, PAUSE_ON)
+    PAUSE_ON = True
+    vis = VisualizationTool(lane_src, pred_src, img_folder, opt_name, writer, PAUSE_ON)
     vis.doVisualization()
