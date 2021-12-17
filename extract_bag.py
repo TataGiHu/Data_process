@@ -252,7 +252,7 @@ def main(i, bag_list, save_root, extract_image):
 
 
 def mpl_call(bag_dir, save_root, extract_image) :
-  n_task = 8
+  n_task = 4 
   p = Pool(n_task)
 
   bags = read_dir(bag_dir)
@@ -294,8 +294,7 @@ if __name__ == "__main__":
   save_root = args.save_root
   extract_image = args.extract_image
 
-  mpl_enable = False
-
+  mpl_enable = True
   if mpl_enable: 
     mpl_call(bag_dir, save_root, extract_image)
   else:

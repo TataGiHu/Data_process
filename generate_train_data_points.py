@@ -12,6 +12,8 @@ sys.setdefaultencoding('UTF-8')
 
 
 INVALID_INDEX = -100
+LARGE_SLOPE_THRESHOLD = 100
+LARGE_Y_THRESHOLD = 100
 CAMERA_SOURCE_FRONT_MID = 1
 
 
@@ -19,6 +21,12 @@ def get_poly_y_value(x, coeff):
     res = 0
     for param in coeff:
         res = res * x + param
+    return res
+
+def get_poly_y_slope(x, coeff):
+    res = 0
+    for i in range(len(coeff)):
+        res = res * x + coeff[i] * (len(coeff) - 1 -i)
     return res
 
 
@@ -86,13 +94,13 @@ class DataGenerator():
       if (index_of_point_before > 0) and (index_of_point_after < ref_line_size):
           start_num = index_of_closest_point - num / 2
           end_num = index_of_closest_point + num / 2
-      elif (index_of_point_before < 0) and (index_of_point_after > ref_line_size):
+      elif (index_of_point_before <= 0) and (index_of_point_after >= ref_line_size):
           start_num = 0
           end_num = ref_line_size - 1
-      elif index_of_point_before < 0:
+      elif index_of_point_before <= 0:
           start_num = 0
           end_num = start_num + num
-      elif index_of_point_after > ref_line_size:
+      elif index_of_point_after >= ref_line_size:
           end_num = ref_line_size - 1
           start_num = end_num - num
 
@@ -127,7 +135,14 @@ class DataGenerator():
             for x in range(self.gt_scope_start, self.gt_scope_end, self.step_width):
                 output_points = np.array(self.get_closest_n_points(x, lane, 6))
                 coeff = np.polyfit(output_points[:, 0], output_points[:, 1], 2)
-                gt_lane_point = [x, get_poly_y_value(x, coeff)]
+                gt_lane_point = []
+                if (not abs(get_poly_y_slope(x, coeff)) > LARGE_SLOPE_THRESHOLD) :
+                    gt_lane_point = [x, get_poly_y_value(x, coeff)]
+                else:
+                    gt_lane_point = [x, output_points[np.argmin(np.abs(output_points[:,0] - x))][1]]
+                if (abs(gt_lane_point[1]) > LARGE_Y_THRESHOLD):
+                    print("Y is too large with value of " + str(gt_lane_point[1]))
+                    return []
                 current_lane.append(gt_lane_point)
             gt.append(current_lane)
         return gt
@@ -181,6 +196,7 @@ class DataGenerator():
         for j in range(i-self.n_frame+1, i+1):
             history_vision_lanes = ori_datas[j]["vision_lane"]["lane_perception"]["lanes"]
             frame_lane_points = []
+            frame_road_edge_points = []
             for history_vision_lane in history_vision_lanes:
                 if is_ignore_vision_lane(history_vision_lane):
                     continue
@@ -190,7 +206,18 @@ class DataGenerator():
                     current_lane_points.append([car_point[0], car_point[1]])
                 frame_lane_points.append(current_lane_points)
             dt_lane_points["lanes"].append(frame_lane_points)
-
+             
+            history_vision_road_edges = ori_datas[j]["vision_lane"]["road_edge_perception"]["road_edges"] 
+            for history_vision_road_edge in  history_vision_road_edges:
+                if is_ignore_road_edge(history_vision_road_edge):
+                    continue
+                current_lane_edges = []
+                points_3d_enu = history_vision_road_edge["points_3d_enu"]
+                for point_3d_enu in points_3d_enu:
+                    car_point = self.cc_.enu_to_car(point_3d_enu)
+                    current_lane_edges.append([car_point[0], car_point[1]])
+                frame_road_edge_points.append(current_lane_edges)
+            dt_lane_points["road_edges"].append(frame_road_edge_points)
         return dt_lane_points
 
 
@@ -209,7 +236,8 @@ def main(i, file_list, save_root):
         ori_datas = read_files(file_path)
 
         for i, ori_data in enumerate(ori_datas):
-
+            if not ("egopose" in ori_data and "worldmodel" in ori_data and "vision_lane" in ori_data):
+                continue
             egopose = ori_data["egopose"]
             wm = ori_data["worldmodel"]
             vision_lane = ori_data["vision_lane"]
@@ -228,6 +256,8 @@ def main(i, file_list, save_root):
 
                 gt = data_generator.generate_gt_points(wm_lanes)
                 
+                if len(gt) ==0:
+                    continue                
 
                 train_data = {
                     "ts": {
@@ -246,7 +276,7 @@ def main(i, file_list, save_root):
 
 
 def mpl_call(bag_dir, save_root):
-    n_task = 8
+    n_task = 4 
     p = Pool(n_task)
 
     files = read_dir(bag_dir, suffix=".txt")
@@ -275,7 +305,7 @@ def single_call(bag_dir, save_root):
 
 
 if __name__ == "__main__":
-
+    
     parser = argparse.ArgumentParser(description="Process args.")
     parser.add_argument('--bag_dir', '-b', required=True, help='bag name')
     parser.add_argument('--save_root', '-s', required=True, help="save folder")
@@ -284,7 +314,7 @@ if __name__ == "__main__":
     bag_dir = args.bag_dir
     save_root = args.save_root
 
-    mpl_enable = False
+    mpl_enable = True 
 
     if mpl_enable:
         mpl_call(bag_dir, save_root)
