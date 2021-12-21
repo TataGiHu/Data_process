@@ -149,7 +149,7 @@ class DataGenerator():
         if not lane_existence[0]: #if left lane does not exist 
             gt.insert(0, [])
         if not lane_existence[2]: #if right lane does not exist 
-            gt.append(2)
+            gt.append([])
         assert(len(gt) == 3)
         
         return gt
