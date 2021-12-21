@@ -127,11 +127,12 @@ class DataGenerator():
             dt ([type]): [Descrete Lane points from vision perception]
         """
         gt = []
+        lane_existence = [0,0,0]
         for lane in wm_lanes:
             current_lane = []
-            if not lane["relative_id"] == 0:
-                gt.append(current_lane)
+            if lane["relative_id"] > 1 or lane["relative_id"] < -1:
                 continue
+            lane_existence[lane["relative_id"] + 1] = 1
             for x in range(self.gt_scope_start, self.gt_scope_end, self.step_width):
                 output_points = np.array(self.get_closest_n_points(x, lane, 6))
                 coeff = np.polyfit(output_points[:, 0], output_points[:, 1], 2)
@@ -145,6 +146,12 @@ class DataGenerator():
                     return []
                 current_lane.append(gt_lane_point)
             gt.append(current_lane)
+        if not lane_existence[0]: #if left lane does not exist 
+            gt.insert(0, [])
+        if not lane_existence[2]: #if right lane does not exist 
+            gt.append(2)
+        assert(len(gt) == 3)
+        
         return gt
 
     def generate_vision_enu_point(self, vision_lane):
