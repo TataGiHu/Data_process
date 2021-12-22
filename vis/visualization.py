@@ -79,12 +79,12 @@ class VisualizationTool:
         self.showCarCoordinateSystem()
         if self.pred_data != None:
             self.showPred()
-        plt.text(-10,-13,'frame_id: %d'%idx, ha='left', va='bottom', fontsize=10)
-        plt.text(-10,-15,'ts_egopose: %d'%self.ts_egopose, ha='left', va='bottom', fontsize=10)
-        plt.text(-10,-17,'ts_vision: %d'%self.ts_vision, ha='left', va='bottom', fontsize=10)
-        plt.text(-10,-19,'ts_wm: %d'%self.ts_wm, ha='left', va='bottom', fontsize=10)
+        plt.text(-18,-13,'frame_id: %d'%idx, ha='left', va='bottom', fontsize=8)
+        plt.text(-18,-15,'ts_egopose: %d'%self.ts_egopose, ha='left', va='bottom', fontsize=8)
+        plt.text(-18,-17,'ts_vision: %d'%self.ts_vision, ha='left', va='bottom', fontsize=8)
+        plt.text(-18,-19,'ts_wm: %d'%self.ts_wm, ha='left', va='bottom', fontsize=8)
         self.color_tag()
-        plt.legend(loc='lower right')
+        plt.legend(loc='lower right', fontsize=8)
         if self.PAUSE_ON == True:
             plt.pause(0.000001)
     
@@ -119,7 +119,7 @@ class VisualizationTool:
                 X_gt = range(-20,80)
                 Y_gt = [gt_a*math.pow(x,2)+gt_b*x+gt_c for x in X_gt]
                 plt.plot(X_gt, Y_gt, '-', color='springgreen',linewidth='1.5')
-                plt.text(-10,17,'gt_func: y = %f x^2 + %f x + %f'%(gt_a,gt_b,gt_c), ha='left', va='bottom', fontsize=10)
+                plt.text(-18,17,'gt_func: y = %f x^2 + %f x + %f'%(gt_a,gt_b,gt_c), ha='left', va='bottom', fontsize=8)
     
     def showLanesOrEdges_points(self, items, col):
         for frame in items:
@@ -149,16 +149,22 @@ class VisualizationTool:
         road_edges = dt['road_edges']
         if self.lane_type == 'points':
             self.showLanesOrEdges_points(lanes,'k')
-            self.showLanesOrEdges_points(road_edges,'mediumslateblue')
+            self.showLanesOrEdges_points(road_edges,'darkviolet')
         elif self.lane_type == 'coeff':
             self.showLanesOrEdges_coeff(lanes,'k')
-            self.showLanesOrEdges_coeff(road_edges,'mediumslateblue')
-                        
+            self.showLanesOrEdges_coeff(road_edges,'darkviolet')
+    
+    def showScore(self, score, position_x, position_y):
+        for idx in range(len(score)):
+            plt.text(position_x,position_y,'pred_socre_%d: %f'%(idx+1,score[idx]), ha='left', va='bottom',fontsize=8)
+            position_y = position_y-2
+                    
     def showPred(self):
         for item in self.pred_data:
             if 'ts'in item.keys() and self.ts_egopose == item['ts']:
                 this_pred = item
                 pred = this_pred['pred']
+                score = this_pred['score']
                 if self.pred_type == 'points':
                     for line in pred:
                         X_pred = []
@@ -166,14 +172,16 @@ class VisualizationTool:
                         for point in line:
                             X_pred.append(point[0])
                             Y_pred.append(point[1])
-                        plt.plot(X_pred, Y_pred, '>-', color='skyblue',linewidth='1',label=None)
+                        plt.plot(X_pred, Y_pred, '>--', color='dodgerblue',linewidth='0.8',label=None)
+                    self.showScore(score,20,-13)
                 elif self.pred_type == 'coeff':
                     for line in pred:
                         pred_a, pred_b, pred_c = line[2], line[1], line[0]
                         X_pred = range(-20,80)
                         Y_pred = [pred_a*math.pow(x,2)+pred_b*x+pred_c for x in X_pred]
-                        plt.plot(X_pred, Y_pred, '>.', color='skyblue',linewidth='1',label='pred')
-                        plt.text(-10,15,'pred_func: y = %f x^2 + %f x + %f'%(pred_a,pred_b,pred_c), ha='left', va='bottom', fontsize=10)
+                        plt.plot(X_pred, Y_pred, '>--', color='dodgerblue',linewidth='1',label='pred')
+                        # plt.text(-18,13,'pred_func: y = %f x^2 + %f x + %f'%(pred_a,pred_b,pred_c), ha='left', va='bottom', fontsize=8)
+                    self.showScore(score,20,-13)
                 break
                 
     def showIMG(self):
@@ -190,10 +198,10 @@ class VisualizationTool:
     def color_tag(self):
         plt.plot(-500, 500, '-', color='springgreen',linewidth='2',label='gt')
         plt.plot(-500, 500, '--', color='k',linewidth='2',label='lanes')    
-        plt.plot(-500, 500, '--', color='mediumslateblue',linewidth='2',label='road_edges')
+        plt.plot(-500, 500, '--', color='darkviolet',linewidth='2',label='road_edges')
         plt.plot(-500, 500, '.', color='r',linewidth='0.8',label='car_coordinate_sys')
         if self.pred_data != None:
-            plt.plot(-500, 500, '>-', color='skyblue',linewidth='2',label='pred')
+            plt.plot(-500, 500, '>-', color='dodgerblue',linewidth='0.8',label='pred')
         
         
           
