@@ -126,13 +126,11 @@ class DataGenerator():
             wm_lanes ([processedMap Lanes]): [Lanes from processedMap data]
             dt ([type]): [Descrete Lane points from vision perception]
         """
-        gt = []
-        lane_existence = [0,0,0]
+        gt = [[],[],[]]
         for lane in wm_lanes:
             current_lane = []
             if lane["relative_id"] > 1 or lane["relative_id"] < -1:
                 continue
-            lane_existence[lane["relative_id"] + 1] = 1
             for x in range(self.gt_scope_start, self.gt_scope_end, self.step_width):
                 output_points = np.array(self.get_closest_n_points(x, lane, 6))
                 coeff = np.polyfit(output_points[:, 0], output_points[:, 1], 2)
@@ -145,11 +143,7 @@ class DataGenerator():
                     print("Y is too large with value of " + str(gt_lane_point[1]))
                     return []
                 current_lane.append(gt_lane_point)
-            gt.append(current_lane)
-        if not lane_existence[0]: #if left lane does not exist 
-            gt.insert(0, [])
-        if not lane_existence[2]: #if right lane does not exist 
-            gt.append([])
+            gt[lane["relative_id"] + 1] = current_lane
         assert(len(gt) == 3)
         
         return gt
