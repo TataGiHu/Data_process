@@ -53,7 +53,7 @@ class PinholeCameraProjecter(CameraProjecter):
     x1 = (u-self.cx) / self.fx
     y1 = (v-self.cy) / self.fy
 
-    k1, k2, p1, p2, k3 = self.k1, self.k2, self.p1, self.p2, self.k3
+    k1, k2, p1, p2, k3 = self.kc2, self.kc3, self.kc4, self.kc5, 0
 
     r2 = x1**2 + y1**2
     x2  = x1*(1+k1*r2+k2*math.pow(r2,2)+k3*math.pow(r2,3))+2*p1*x1*y1+p2*(r2+2*x1*x1)
@@ -75,6 +75,9 @@ class PinholeCameraProjecter(CameraProjecter):
 
     point_img_undistorted = self.undistort(point_img)
     return True, point_img_undistorted
+
+  def project_from_cam_to_car(self, point_3d):
+    return self.camR @ point_3d + self.camT
 
   def project_multi(self, corners):
 
@@ -350,6 +353,7 @@ class LidarProjecterHelper():
       self.projecter_helper_map[tag] = CameraFactory.get_camera_helper(is_cylinder, calib_file)
 
 
+  
   def project(self, corners):
     
     points_2d_all = {}
@@ -377,6 +381,7 @@ if __name__ == "__main__":
                        [ 4.31081652e+01,  1.26767640e+01, -3.24467976e-07]])
   helper = LidarProjecterHelper(calib_dir)
   point2d = helper.project(points3d)
+  point3d_car = helper.projec
   print(point2d)
 
 

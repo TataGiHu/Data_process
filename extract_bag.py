@@ -120,8 +120,9 @@ def extract_data(bag_file, save_root, extract_image):
   worldmodel_topic = "/worldmodel/processed_map"
   egopose_topic = "/mla/egopose"
   image_topic = "/sensor/camera_front_mid/cylinder/image_raw/compressed"
+  param_aggregator_topic = "/param_aggregator/config"
 
-  topic_names = [vision_lane_topic, worldmodel_topic, egopose_topic]
+  topic_names = [vision_lane_topic, worldmodel_topic, egopose_topic, param_aggregator_topic]
   image_save_root = None
   bridge = None
   if extract_image:
