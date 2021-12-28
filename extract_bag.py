@@ -10,6 +10,7 @@ import rosbag
 import argparse
 import numpy as np
 from multiprocessing import Pool
+import base64
 from helper import message_converter
 from helper.io_helper import save_json, read_files, \
   read_dir, write_list, split_data, make_dirs
@@ -115,7 +116,6 @@ def extract_data(bag_file, save_root, extract_image):
   all_vision_lane = [] 
   all_wm_lane = [] 
   all_egopose = [] 
-
   vision_lane_topic = "/perception/vision/lane"
   worldmodel_topic = "/worldmodel/processed_map"
   egopose_topic = "/mla/egopose"
@@ -132,9 +132,20 @@ def extract_data(bag_file, save_root, extract_image):
     make_dirs(image_save_root)
     bridge = CvBridge()
     # 1. extract  the topic msg
+  front_mid_calib_data_dict = dict(calib="")
   for topic, msg, ts in bag.read_messages(topics=topic_names): 
 
     data_json = message_converter.convert_ros_message_to_dictionary(msg)
+    
+    if topic == param_aggregator_topic:
+      for config in data_json['config_array']:
+        if "camera_front_mid.yaml" in config['name']:
+          front_mid_calib_data = yaml.load(base64.b64decode(config['data'])[14:])
+          front_mid_calib_data_dict["calib"] = front_mid_calib_data
+          break 
+    
+          
+
 
     if topic == vision_lane_topic:
       all_vision_lane.append(data_json) 
@@ -177,7 +188,7 @@ def extract_data(bag_file, save_root, extract_image):
   i=j=k=0
   max_time_diff = 50000 # 50ms 
   the_all_aligned_result = []
-  i = -1
+  the_all_aligned_result.append(json.dumps(front_mid_calib_data_dict)) # First line of file is camera calib
   while i + 1 < size_wm:
     i += 1  
     the_worldmodel = all_wm_lane[i]
@@ -220,6 +231,7 @@ def extract_data(bag_file, save_root, extract_image):
       "vision_lane": the_vision_lane,
       "worldmodel": the_worldmodel
     }
+    
  
     the_all_aligned_result.append(json.dumps(aligned_result))
     #i += 1

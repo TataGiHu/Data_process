@@ -1,6 +1,8 @@
 import sys
-reload(sys)
-sys.setdefaultencoding('UTF-8')
+
+if sys.version_info[0] < 3:
+  reload(sys)
+  sys.setdefaultencoding('UTF-8')
 
 import os 
 import json

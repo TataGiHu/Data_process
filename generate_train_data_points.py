@@ -231,10 +231,12 @@ def main(i, file_list, save_root):
     for j, file_path in enumerate(file_list):
 
         train_datas = []
-
-        train_datas.append(json.dumps(data_generator.get_data_info()))
-
+        meta_dict = {}
+        meta_dict.update(data_generator.get_data_info())
         ori_datas = read_files(file_path)
+        meta_dict.update(ori_datas[0])
+        train_datas.append(json.dumps(meta_dict))
+        ori_datas = ori_datas[1:]
 
         for i, ori_data in enumerate(ori_datas):
             if not ("egopose" in ori_data and "worldmodel" in ori_data and "vision_lane" in ori_data):
