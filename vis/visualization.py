@@ -66,14 +66,16 @@ class VisualizationTool:
     
     def showALL(self, idx):
         plt.ion()
-        plt.subplot(211)
+        plt.subplot(121)
         plt.cla()
         self.showIMG()   
-        plt.subplot(212)
+        plt.subplot(122)
+        ax = plt.gca()
+        ax.set_facecolor('darkgray')
         plt.cla()
         plt.grid(True)
-        plt.xlim(-20,80)
-        plt.ylim(-20,20)
+        plt.ylim(-20,80)
+        plt.xlim(-20,20)
         self.showGT(idx)
         self.showDT(idx)
         self.showCarCoordinateSystem()
@@ -95,11 +97,11 @@ class VisualizationTool:
         light_Y = [3,0.8,-0.8,-3]
         geer_X = [[-1.5,-1.5,-0.7,-0.7],[-1.5,-1.5,-0.7,-0.7],[1.5,1.5,0.7,0.7],[1.5,1.5,0.7,0.7]]
         geer_Y = [[1,1.3,1.3,1],[-1,-1.3,-1.3,-1],[1,1.3,1.3,1],[1,-1.3,-1.3,-1]]
-        plt.plot(car_X,car_Y,'-',linewidth='1',color='r')
+        plt.plot(car_Y,car_X,'-',linewidth='1',color='k')
         for i in range(4):
-            plt.plot(geer_X[i],geer_Y[i],'-',linewidth='1',color='r')
-        plt.plot(light_X,light_Y,'-.',linewidth='1',color='orange')
-        plt.plot(0,0,'.',color='r')
+            plt.plot(geer_Y[i],geer_X[i],'-',linewidth='1',color='k')
+        plt.plot(light_Y,light_X,'-.',linewidth='1',color='yellow')
+        plt.plot(0,0,'.',color='k')
 
            
     def showGT(self, idx):
@@ -112,35 +114,48 @@ class VisualizationTool:
                 for point in line:
                     X_gt.append(point[0])
                     Y_gt.append(point[1])
-                plt.plot(X_gt, Y_gt,'-', color='springgreen',linewidth='1.5')
+                Y_gt_new = [i*-1 for i in Y_gt]
+                plt.plot(Y_gt_new, X_gt,'-', color='w',linewidth='1.5')
         elif self.lane_type == 'coeff':
             for line in gt:
                 gt_a, gt_b, gt_c = line[2], line[1], line[0]
                 X_gt = range(-20,80)
                 Y_gt = [gt_a*math.pow(x,2)+gt_b*x+gt_c for x in X_gt]
-                plt.plot(X_gt, Y_gt, '-', color='springgreen',linewidth='1.5')
-                plt.text(-18,17,'gt_func: y = %f x^2 + %f x + %f'%(gt_a,gt_b,gt_c), ha='left', va='bottom', fontsize=8)
+                Y_gt_new = [i*-1 for i in Y_gt]
+                plt.plot(Y_gt_new, X_gt, '-', color='w',linewidth='1.5')
+                plt.text(-18,60,'gt_func: y = %f x^2 + %f x + %f'%(gt_a,gt_b,gt_c), ha='left', va='bottom', fontsize=8)
     
-    def showLanesOrEdges_points(self, items, col):
+    def showLanesOrEdges_points(self, items, col, cur_lane_col):
         for frame in items:
             for line in frame:
-                X_dt = []
-                Y_dt = []
-                for point in line:
-                    X_dt.append(point[0])
-                    Y_dt.append(point[1])
-                plt.plot(X_dt, Y_dt,'--', color=col, linewidth='1')
+                if abs(line[0][1])>2.5:
+                    X_dt = []
+                    Y_dt = []
+                    for point in line:
+                        X_dt.append(point[0])
+                        Y_dt.append(point[1])
+                    Y_dt_new = [i*-1 for i in Y_dt]
+                    plt.plot(Y_dt_new, X_dt,'--', color=col, linewidth='1')
+                elif abs(line[0][1])<=2.5:
+                    X_dt = []
+                    Y_dt = []
+                    for point in line:
+                        X_dt.append(point[0])
+                        Y_dt.append(point[1])
+                    Y_dt_new = [i*-1 for i in Y_dt]
+                    plt.plot(Y_dt_new, X_dt,'--', color=cur_lane_col, linewidth='1')
     
-    def showLanesOrEdges_coeff(self, items, col):
+    def showLanesOrEdges_coeff(self, items, col, cur_lane_col):
         for frame in items:
             for line in frame:
                 dt_a, dt_b, dt_c = line[2], line[1], line[0]
                 X_dt = range(-20,80)
                 Y_dt = [dt_a*math.pow(x,2)+dt_b*x+dt_c for x in X_dt]
+                Y_dt_new = [-1*i for i in Y_dt]
                 if abs(dt_c)<=2.5:
-                    plt.plot(X_dt, Y_dt, '--', color=col,linewidth='1')
+                    plt.plot(Y_dt_new, X_dt, '--', color=cur_lane_col,linewidth='1')
                 elif abs(dt_c)>2.5:
-                    plt.plot(X_dt, Y_dt, '--', color=col,linewidth='1')
+                    plt.plot(Y_dt_new, X_dt, '--', color=col,linewidth='1')
     
     def showDT(self,idx):
         this_lane = self.currentLane(idx)
@@ -148,11 +163,11 @@ class VisualizationTool:
         lanes = dt['lanes']
         road_edges = dt['road_edges']
         if self.lane_type == 'points':
-            self.showLanesOrEdges_points(lanes,'k')
-            self.showLanesOrEdges_points(road_edges,'darkviolet')
+            self.showLanesOrEdges_points(lanes,'m','springgreen')
+            self.showLanesOrEdges_points(road_edges,'r','springgreen')
         elif self.lane_type == 'coeff':
-            self.showLanesOrEdges_coeff(lanes,'k')
-            self.showLanesOrEdges_coeff(road_edges,'darkviolet')
+            self.showLanesOrEdges_coeff(lanes,'m','springgreen')
+            self.showLanesOrEdges_coeff(road_edges,'r','springgreen')
     
     def showScore(self, score, position_x, position_y):
         for idx in range(len(score)):
@@ -172,16 +187,18 @@ class VisualizationTool:
                         for point in line:
                             X_pred.append(point[0])
                             Y_pred.append(point[1])
-                        plt.plot(X_pred, Y_pred, '>--', color='dodgerblue',linewidth='0.8',label=None)
-                    self.showScore(score,20,-13)
+                        Y_pred_new = [-1*i for i in Y_pred]
+                        plt.plot(Y_pred_new, X_pred, '.--', color='dodgerblue',linewidth='0.8',label=None)
+                    self.showScore(score,-18,75)
                 elif self.pred_type == 'coeff':
                     for line in pred:
                         pred_a, pred_b, pred_c = line[2], line[1], line[0]
                         X_pred = range(-20,80)
                         Y_pred = [pred_a*math.pow(x,2)+pred_b*x+pred_c for x in X_pred]
-                        plt.plot(X_pred, Y_pred, '>--', color='dodgerblue',linewidth='1',label='pred')
+                        Y_pred_new = [-1*i for i in Y_pred]
+                        plt.plot(Y_pred_new, X_pred, '.--', color='dodgerblue',linewidth='1',label='pred')
                         # plt.text(-18,13,'pred_func: y = %f x^2 + %f x + %f'%(pred_a,pred_b,pred_c), ha='left', va='bottom', fontsize=8)
-                    self.showScore(score,20,-13)
+                    self.showScore(score,-18,75)
                 break
                 
     def showIMG(self):
@@ -190,25 +207,24 @@ class VisualizationTool:
             this_img_name = self.img_folder + '/' + ts_vision_str + '.jpg'
             img = mpimg.imread(this_img_name)
             plt.axis('off')
-            plt.imshow(img)
+            plt.imshow(img,extent=(-110,110,-100,100))
         else:
             plt.axis('off')
             plt.text(0.5,0.5,"No Image Source", ha='center', va='center', fontsize=20)
     
     def color_tag(self):
-        plt.plot(-500, 500, '-', color='springgreen',linewidth='2',label='gt')
-        plt.plot(-500, 500, '--', color='k',linewidth='2',label='lanes')    
-        plt.plot(-500, 500, '--', color='darkviolet',linewidth='2',label='road_edges')
-        plt.plot(-500, 500, '.', color='r',linewidth='0.8',label='car_coordinate_sys')
+        plt.plot(-500, 500, '-', color='w',linewidth='2',label='gt')
+        plt.plot(-500, 500, '--', color='m',linewidth='2',label='lanes')    
+        plt.plot(-500, 500, '--', color='r',linewidth='2',label='road_edges')
+        plt.plot(-500, 500, '.', color='k',linewidth='0.8',label='car_coordinate_sys')
         if self.pred_data != None:
-            plt.plot(-500, 500, '>-', color='dodgerblue',linewidth='0.8',label='pred')
-        
+            plt.plot(-500, 500, '.-', color='dodgerblue',linewidth='0.8',label='pred')
         
           
     def doVisualization(self):
-        figure = plt.figure(figsize=(8, 8))
+        fig = plt.figure(figsize=(13, 10))
         video_name = self.output_name + '.mp4'
-        with self.writer.saving(figure, video_name, 100):
+        with self.writer.saving(fig, video_name, 100):
             for idx in range(1,self.data_len):
                 self.initTS(idx)
                 self.showALL(idx)
@@ -231,8 +247,8 @@ if __name__ == "__main__":
     
     
     
-    metadata = dict(title='01', artist='Matplotlib', comment='Lane fitting')
-    writer = FFMpegWriter(fps=10, metadata=metadata)
+    metadata = dict(title='lane_data', artist='Matplotlib', comment='Lane_visualization')
+    writer = FFMpegWriter(fps=8, metadata=metadata)
     PAUSE_ON = False
     vis = VisualizationTool(lane_src, pred_src, img_folder, opt_name, writer, PAUSE_ON)
     vis.doVisualization()
