@@ -269,7 +269,8 @@ def main(i, file_list, save_root):
                         "wm": wm["meta"]["egopose_timestamp_us"]
                     },
                     "dt": dt,
-                    "gt": gt
+                    "gt": gt,
+                    "egopose": ori_data["egopose"]
                 }
                 train_datas.append(json.dumps(train_data))
             # time gap
