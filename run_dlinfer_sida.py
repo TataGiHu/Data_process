@@ -11,11 +11,11 @@ import sys
 import cv2
 import json
 import onnxruntime
+import argparse
 from datetime import datetime
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt # For debug purpose only
 from multiprocessing import Process
 import tqdm
-from vis_ground3d import VisGround3d
 
 
 def chunk(xs, n):
@@ -64,7 +64,6 @@ def parse_ld_2d_rst(json_data):
         pts = ln['cpoints']
         new_lanes.append(pts)
     return new_lanes  # [[{'x': xxx, 'y': yyy}, {}, ...], [], [], []]
-
 
 
 def parse_ld_3d_rst(ld_2d, depth_map, is_raw_points=False):
@@ -161,28 +160,12 @@ def draw_ld2d(img, lanes):
             cv2.circle(img, (int(x), int(y)), 1, (0, 0, 255), 2)
 
 
-def draw_ld3d(img, lane3D, color=((0, 0, 255)), is_poly=False):
-    vis_handle = VisGround3d(img,
-                             x_range=(-10, 10),
-                             y_range=(-3, 3),
-                             z_range=(0, 120),
-                             bv_width=300,
-                             bv_height=768)
-    vis_map = vis_handle(None,
-                         lane3D,
-                         img,
-                         img_color=color,
-                         cam_color=color,
-                         is_poly=is_poly)
-    return vis_map
-
-
 def get_lanepoints_from_resized_segmap(segmap):
     # debug statements
     # heat_points = segmap>75
     # plt.imshow((heat_points*100).astype(int), cmap='hot', interpolation='nearest')
     # plt.savefig("heatpoints.png")
-    
+
     heat_points_raw = np.where(segmap > 75)
     heat_points = np.concatenate(
         (heat_points_raw[0].reshape(-1, 1), heat_points_raw[1].reshape(-1, 1)), axis=1)
@@ -193,13 +176,11 @@ def get_lanepoints_from_resized_segmap(segmap):
     return heat_points.tolist()
 
 
-def run_forward_show(src_input, dst_dir, ld_rst_dir):
+def run_forward_show(src_input, dst_dir):
     # init DL-Infer
-    runtime = onnxruntime.InferenceSession('ddlane_single_model_bs1.onnx')
+    runtime = onnxruntime.InferenceSession(model_path)
     input_name = runtime.get_inputs()[0].name
     output_name = runtime.get_outputs()[0].name
-    output_shape = runtime.get_outputs()[0].shape
-    input_shape = runtime.get_inputs()[0].name
     net_input_h, net_input_w, net_input_c = 768, 1024, 3
     net_batch_size = 1  # only support batch 1 now
     dtype = np.float32
@@ -237,67 +218,73 @@ def run_forward_show(src_input, dst_dir, ld_rst_dir):
         time_string = batch[0].split("/")[-1].split('.')[0]
         ld_3d_dict = dict(points=[ld_3d_new], ts=dict(vision=time_string))
 
-
-        with open(output_point_file_dir,'a') as file:
+        with open(dst_dir, 'a') as file:
             file.write(json.dumps(ld_3d_dict) + "\n")
 
 
+if __name__ == "__main__":
 
-model_name = '/workspace/1215_ground_vis_debug/models/model.bin'
-# test_input = '/workspace/1215_ground_vis_debug/bag_data/62113_732/img/'
-test_input = "/workspace/1215_ground_vis_debug/bag_data/62113_732/PLAGD0998_event_HNP_wm_sharp_turning_filter_20211222-161634_0/sensor_camera_front_mid_cylinder_image_raw_compressed/"
-ld_rst_dir = '/workspace/1215_ground_vis_debug/bag_data/62113_732/output/'
-test_output = '/workspace/1215_ground_vis_debug/bag_data/62113_732/yupeng_dlinfer_float_model/'
+    parser = argparse.ArgumentParser(description="Process args.")
+    parser.add_argument('--bag_images', '-b', required=True,
+                        help='Original bag points file name ')
+    parser.add_argument('--output_dir', '-o', required=False,
+                        help="Output path", default="/testout/")
 
-output_point_file_dir = '/testout/' + datetime.today().strftime('%Y-%m-%d-%H_%M_%S') + ".txt"
+    args = parser.parse_args()
 
-process_num = 3
-src_imgs = os.listdir(test_input)
-src_imgs = [os.path.join(test_input, file_name) for file_name in src_imgs]
-print('all img num = ', len(src_imgs))
-imgs_in_process = [[] for n in range(process_num)]
-n = 0
-for img in src_imgs:
-    imgs_in_process[n % process_num].append(img)
-    n += 1
+    model_path = '/workspace/1215_ground_vis_debug/ddlane_single_model_bs1.onnx'
+    test_input = args.bag_images
+    time_now = datetime.today().strftime('%Y-%m-%d-%H_%M_%S')
+    process_num = 3
+    src_imgs = os.listdir(test_input)
+    src_imgs = [os.path.join(test_input, file_name) for file_name in src_imgs]
+    print('all img num = ', len(src_imgs))
+    imgs_in_process = [[] for n in range(process_num)]
+    n = 0
+    for img in src_imgs:
+        imgs_in_process[n % process_num].append(img)
+        n += 1
 
-process_list = []
-for n in range(process_num):
-    p = Process(target=run_forward_show, args=(imgs_in_process[n],
-                                               test_output, ld_rst_dir))
-    process_list.append(p)
-    p.start()
-for p in process_list:
-    p.join()
+    process_list = []
+    for n in range(process_num):
+        test_output = args.output_dir + \
+            imgs_in_process[n][0].split('62113_732')[1].split(
+                '/')[1] + time_now + ".txt"
+        p = Process(target=run_forward_show, args=(imgs_in_process[n],
+                                                   test_output))
+        process_list.append(p)
+        p.start()
+    for p in process_list:
+        p.join()
 
-print('='*100)
-print('='*100)
+    print('='*100)
+    print('='*100)
 
-# trans img to video
-fourcc = cv2.VideoWriter_fourcc(*'XVID')
-images = sorted(os.listdir(test_output))
-video = None
-for img_file in tqdm.tqdm(images):
-    img = cv2.imread(os.path.join(test_output, img_file))
-    cv2.putText(img, img_file.split(
-        '/')[-1][:-4], (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 0, 255), 2)
-    if video is None:
-        try:
-            h, w = img.shape[:2]
-            video = cv2.VideoWriter('./temp.avi', fourcc, 20, (w, h))
-        except:
-            pass
-    if video is not None:
-        video.write(img)
-video.release()
+    # trans img to video
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    images = sorted(os.listdir(test_output))
+    video = None
+    for img_file in tqdm.tqdm(images):
+        img = cv2.imread(os.path.join(test_output, img_file))
+        cv2.putText(img, img_file.split(
+            '/')[-1][:-4], (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 0, 255), 2)
+        if video is None:
+            try:
+                h, w = img.shape[:2]
+                video = cv2.VideoWriter('./temp.avi', fourcc, 20, (w, h))
+            except:
+                pass
+        if video is not None:
+            video.write(img)
+    video.release()
 
-print('='*60)
-print('='*60)
-print('='*60)
-print('trans avi to mp4')
+    print('='*60)
+    print('='*60)
+    print('='*60)
+    print('trans avi to mp4')
 
-cmd = './ffmpeg -i temp.avi ' + test_output + 'dst.mp4'
-os.system(cmd)
-os.system('rm temp.avi')
+    cmd = './ffmpeg -i temp.avi ' + test_output + 'dst.mp4'
+    os.system(cmd)
+    os.system('rm temp.avi')
 
-print('Done!')
+    print('Done!')
