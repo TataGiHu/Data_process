@@ -4,6 +4,7 @@ import numpy as np
 import argparse
 from helper.coordination_helper import CoordinateConverter
 from helper.io_helper import read_files
+from helper.pcmera import Pcamera
 # import cv2
 from scipy.spatial.transform import Rotation as R
 
@@ -13,12 +14,8 @@ SKIP_LINES = 2
 
 class FrameTransformer:
     def __init__(self, calib):
-        self.camT = calib["t_s2b"]
-       # HardCoded, to be updated in the future
-        rot_vec = [1.1976413591081210e+00, -
-                   1.2270284553620212e+00, 1.2270284553620210e+00]
-        trans_vec = [3.1807698470150018e-02,
-                     1.4658220000000000e+00, -1.9146595187181716e+00]
+        self.new_camera = Pcamera(height=0, origin_camera_dict=calib)
+        rot_vec, trans_vec = self.new_camera.getCar2CamTransform()
         rotation_matrix = R.from_rotvec(np.array(rot_vec)).as_matrix()
         self.camR = np.eye(4)
         self.camR[:3, :3] = rotation_matrix
