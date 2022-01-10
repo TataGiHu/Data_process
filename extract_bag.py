@@ -188,6 +188,7 @@ def extract_data(bag_file, save_root, extract_image):
   i=j=k=0
   max_time_diff = 50000 # 50ms 
   the_all_aligned_result = []
+  i = -1
   the_all_aligned_result.append(json.dumps(front_mid_calib_data_dict)) # First line of file is camera calib
   while i + 1 < size_wm:
     i += 1  

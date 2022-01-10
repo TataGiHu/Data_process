@@ -225,8 +225,8 @@ def run_forward_show(src_input, dst_dir):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Process args.")
-    parser.add_argument('--bag_images', '-b', required=True,
-                        help='Original bag points file name ')
+    parser.add_argument('--bag_images_dir', '-b', required=True,
+                        help='Original bag points file directory ')
     parser.add_argument('--output_dir', '-o', required=False,
                         help="Output path", default="/testout/")
 
@@ -261,30 +261,10 @@ if __name__ == "__main__":
     print('='*100)
 
     # trans img to video
-    fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    images = sorted(os.listdir(test_output))
-    video = None
-    for img_file in tqdm.tqdm(images):
-        img = cv2.imread(os.path.join(test_output, img_file))
-        cv2.putText(img, img_file.split(
-            '/')[-1][:-4], (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 0, 255), 2)
-        if video is None:
-            try:
-                h, w = img.shape[:2]
-                video = cv2.VideoWriter('./temp.avi', fourcc, 20, (w, h))
-            except:
-                pass
-        if video is not None:
-            video.write(img)
-    video.release()
 
     print('='*60)
     print('='*60)
     print('='*60)
     print('trans avi to mp4')
-
-    cmd = './ffmpeg -i temp.avi ' + test_output + 'dst.mp4'
-    os.system(cmd)
-    os.system('rm temp.avi')
 
     print('Done!')
