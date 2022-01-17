@@ -189,23 +189,25 @@ class DataGenerator():
                 road_edge["points_3d_enu"].append(point_3d_enu)
 
     def generate_dt(self, i, ori_datas):
-
         dt_lane_points = {
             "lanes": [],
             "road_edges": []
         }
         for j in range(i-self.n_frame+1, i+1):
-            history_vision_lanes = ori_datas[j]["vision_lane"]["lane_perception"]["lanes"]
             frame_lane_points = []
             frame_road_edge_points = []
+            history_vision_lanes = ori_datas[j]["vision_lane"]["lane_perception"]["lanes"]
             for history_vision_lane in history_vision_lanes:
                 if is_ignore_vision_lane(history_vision_lane):
                     continue
-                current_lane_points = []
+                current_lane = {
+                    "lane_type":history_vision_lane["lane_type"]["value"],
+                    "points":[]
+                }
                 for i, enu_point in enumerate(history_vision_lane["points_3d_enu"]):
                     car_point = self.cc_.enu_to_car(enu_point)
-                    current_lane_points.append([car_point[0], car_point[1]])
-                frame_lane_points.append(current_lane_points)
+                    current_lane["points"].append([car_point[0], car_point[1]])
+                frame_lane_points.append(current_lane)
             dt_lane_points["lanes"].append(frame_lane_points)
              
             history_vision_road_edges = ori_datas[j]["vision_lane"]["road_edge_perception"]["road_edges"] 
@@ -220,6 +222,7 @@ class DataGenerator():
                 frame_road_edge_points.append(current_lane_edges)
             dt_lane_points["road_edges"].append(frame_road_edge_points)
         return dt_lane_points
+        
 
 
 def main(i, file_list, save_root):
@@ -233,7 +236,10 @@ def main(i, file_list, save_root):
         train_datas = []
         meta_dict = {}
         meta_dict.update(data_generator.get_data_info())
+
+
         ori_datas = read_files(file_path)
+
         meta_dict.update(ori_datas[0])
         train_datas.append(json.dumps(meta_dict))
         ori_datas = ori_datas[1:]
@@ -270,7 +276,7 @@ def main(i, file_list, save_root):
                     },
                     "dt": dt,
                     "gt": gt,
-                    "egopose": ori_data["egopose"]
+                    #"egopose":ori_data["egopose"]
                 }
                 train_datas.append(json.dumps(train_data))
             # time gap
