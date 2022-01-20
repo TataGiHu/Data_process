@@ -47,7 +47,7 @@ class DataGenerator():
         self.feature_size = 3
         self.gt_scope_start = -20
         self.step_width = 5
-        self.gt_scope_end = 80
+        self.gt_scope_end = 100
         self.data_info = {
             "type": "points",
             "feature": "descrete points",

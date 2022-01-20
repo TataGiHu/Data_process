@@ -41,6 +41,8 @@ class VisualizationTool:
             self.output_name = temp[0]
         else:
             self.output_name = opt_name
+        self.vis_begin = -20
+        self.vis_end = 100
         
     def dataProcess(self, file_name):
         if file_name != None:
@@ -74,17 +76,17 @@ class VisualizationTool:
         ax.set_facecolor('darkgray')
         plt.cla()
         plt.grid(True)
-        plt.ylim(-20,80)
+        plt.ylim(self.vis_begin, self.vis_end)
         plt.xlim(-20,20)
         self.showGT(idx)
         self.showDT(idx)
         self.showCarCoordinateSystem()
         if self.pred_data != None:
             self.showPred()
-        plt.text(-18,-13,'frame_id: %d'%idx, ha='left', va='bottom', fontsize=8)
-        plt.text(-18,-15,'ts_egopose: %d'%self.ts_egopose, ha='left', va='bottom', fontsize=8)
-        plt.text(-18,-17,'ts_vision: %d'%self.ts_vision, ha='left', va='bottom', fontsize=8)
-        plt.text(-18,-19,'ts_wm: %d'%self.ts_wm, ha='left', va='bottom', fontsize=8)
+        plt.text(self.vis_begin+2,-13,'frame_id: %d'%idx, ha='left', va='bottom', fontsize=8)
+        plt.text(self.vis_begin+2,-15,'ts_egopose: %d'%self.ts_egopose, ha='left', va='bottom', fontsize=8)
+        plt.text(self.vis_begin+2,-17,'ts_vision: %d'%self.ts_vision, ha='left', va='bottom', fontsize=8)
+        plt.text(self.vis_begin+2,-19,'ts_wm: %d'%self.ts_wm, ha='left', va='bottom', fontsize=8)
         self.color_tag()
         plt.legend(loc='lower right', fontsize=8)
         if self.PAUSE_ON == True:
@@ -119,11 +121,11 @@ class VisualizationTool:
         elif self.lane_type == 'coeff':
             for line in gt:
                 gt_a, gt_b, gt_c = line[2], line[1], line[0]
-                X_gt = range(-20,80)
+                X_gt = range(self.vis_begin, self.vis_end)
                 Y_gt = [gt_a*math.pow(x,2)+gt_b*x+gt_c for x in X_gt]
                 Y_gt_new = [i*-1 for i in Y_gt]
                 plt.plot(Y_gt_new, X_gt, '-', color='w',linewidth='1.5')
-                plt.text(-18,60,'gt_func: y = %f x^2 + %f x + %f'%(gt_a,gt_b,gt_c), ha='left', va='bottom', fontsize=8)
+                plt.text(self.vis_begin+2, 60, 'gt_func: y = %f x^2 + %f x + %f'%(gt_a,gt_b,gt_c), ha='left', va='bottom', fontsize=8)
     
     def showLanes_points(self, lanes, col):
         """[function]: Print lanes using dashed lines while "lane_type"==1 
@@ -161,7 +163,7 @@ class VisualizationTool:
         for frame in road_edges:
             for line in frame:
                 dt_a, dt_b, dt_c = line[2], line[1], line[0]
-                X_dt = range(-20,80)
+                X_dt = range(self.vis_begin, self.vis_end)
                 Y_dt = [dt_a*math.pow(x,2)+dt_b*x+dt_c for x in X_dt]
                 Y_dt_new = [-1*i for i in Y_dt]
                 plt.plot(Y_dt_new, X_dt, '-', color=col,linewidth='1')
@@ -203,16 +205,16 @@ class VisualizationTool:
                             plt.plot(Y_pred_new, X_pred, 'P-', color='dodgerblue',linewidth='0.5',label=None)
                         elif i == 2:
                             plt.plot(Y_pred_new, X_pred, '>-', color='dodgerblue',linewidth='0.5',label=None)
-                    self.showScore(score,-18,75)
+                    self.showScore(score, self.vis_begin+2, 75)
                 elif self.pred_type == 'coeff':
                     for line in pred:
                         pred_a, pred_b, pred_c = line[2], line[1], line[0]
-                        X_pred = range(-20,80)
+                        X_pred = range(self.vis_begin, self.vis_end)
                         Y_pred = [pred_a*math.pow(x,2)+pred_b*x+pred_c for x in X_pred]
                         Y_pred_new = [-1*i for i in Y_pred]
                         plt.plot(Y_pred_new, X_pred, '.-', color='dodgerblue',linewidth='1',label='pred')
                         # plt.text(-18,13,'pred_func: y = %f x^2 + %f x + %f'%(pred_a,pred_b,pred_c), ha='left', va='bottom', fontsize=8)
-                    self.showScore(score,-18,75)
+                    self.showScore(score,self.vis_begin+2,75)
                 break
                 
     def showIMG(self):
