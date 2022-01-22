@@ -7,6 +7,7 @@ import numpy as np
 import argparse
 import json
 import sys
+from time import *
 reload(sys)
 sys.setdefaultencoding('UTF-8')
 
@@ -131,7 +132,7 @@ class DataGenerator():
             current_lane = []
             if lane["relative_id"] > 1 or lane["relative_id"] < -1:
                 continue
-            for x in range(self.gt_scope_start, self.gt_scope_end, self.step_width):
+            for x in range(self.gt_scope_start, self.gt_scope_end+1, self.step_width):
                 output_points = np.array(self.get_closest_n_points(x, lane, 6))
                 coeff = np.polyfit(output_points[:, 0], output_points[:, 1], 2)
                 gt_lane_point = []
@@ -226,13 +227,14 @@ class DataGenerator():
 
 
 def main(i, file_list, save_root):
-
+    begin_time = time()
+    
     data_generator = DataGenerator()
 
     n_frame = data_generator.get_n_frame()
-
+    generate_count = 0
     for j, file_path in enumerate(file_list):
-
+        generate_count += 1
         train_datas = []
         meta_dict = {}
         meta_dict.update(data_generator.get_data_info())
@@ -283,10 +285,15 @@ def main(i, file_list, save_root):
         file_name = os.path.basename(file_path).split('.')[0]
         save_file = os.path.join(save_root, file_name+"_points.txt")
         write_list(save_file, train_datas)
+        
+    end_time = time()
+    time_using = (end_time-begin_time)/60
+    print('>>>>> {} datas have been generated <<<<<'.format(generate_count))
+    print('>>>>> Generating using {} minutes <<<<<<'.format(time_using))
 
 
 def mpl_call(bag_dir, save_root):
-    n_task = 4 
+    n_task = 16
     p = Pool(n_task)
 
     files = read_dir(bag_dir, suffix=".txt")
@@ -330,3 +337,5 @@ if __name__ == "__main__":
         mpl_call(bag_dir, save_root)
     else:
         single_call(bag_dir, save_root)
+    
+    

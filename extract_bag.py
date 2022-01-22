@@ -15,7 +15,7 @@ from helper import message_converter
 from helper.io_helper import save_json, read_files, \
   read_dir, write_list, split_data, make_dirs
 from helper.image_helper import *
-
+from time import *
 
 
 def process_vision_lane(msg, all_vision_lane):
@@ -121,7 +121,7 @@ def extract_data(bag_file, save_root, extract_image):
   egopose_topic = "/mla/egopose"
   image_topic = "/sensor/camera_front_mid/cylinder/image_raw/compressed"
   param_aggregator_topic = "/param_aggregator/config"
-
+  MPA_version_mark = "v6.1.8"
   topic_names = [vision_lane_topic, worldmodel_topic, egopose_topic, param_aggregator_topic]
   image_save_root = None
   bridge = None
@@ -131,7 +131,7 @@ def extract_data(bag_file, save_root, extract_image):
     image_save_root = os.path.join(save_root, bag_name, image_dir)
     make_dirs(image_save_root)
     bridge = CvBridge()
-    # 1. extract  the topic msg
+    # 1. extract the topic msg
   front_mid_calib_data_dict = dict(calib="")
   for topic, msg, ts in bag.read_messages(topics=topic_names): 
 
@@ -139,13 +139,15 @@ def extract_data(bag_file, save_root, extract_image):
     
     if topic == param_aggregator_topic:
       for config in data_json['config_array']:
+        if "MPA" in config['name']:
+          MPA_version = config['data']
+          print('MPA: {}'.format(MPA_version))
+          if MPA_version_mark not in MPA_version:
+            return 
         if "camera_front_mid.yaml" in config['name']:
           front_mid_calib_data = yaml.load(base64.b64decode(config['data'])[14:])
           front_mid_calib_data_dict["calib"] = front_mid_calib_data
           break 
-    
-          
-
 
     if topic == vision_lane_topic:
       all_vision_lane.append(data_json) 
@@ -249,7 +251,8 @@ def extract_data(bag_file, save_root, extract_image):
 
 
 def main(i, bag_list, save_root, extract_image):
-
+      
+  begin_time = time()    
   for j, bag_file in enumerate(bag_list):
     if 0:
       try:
@@ -262,11 +265,13 @@ def main(i, bag_list, save_root, extract_image):
         print("parse {} : {}".format(j, bag_file))
     else:
       extract_data(bag_file, save_root, extract_image)
-
+  end_time = time()
+  time_using = (end_time-begin_time)/60
+  print('>>>>> Extracting using {} minutes <<<<<<'.format(time_using))
 
 
 def mpl_call(bag_dir, save_root, extract_image) :
-  n_task = 4 
+  n_task = 16
   p = Pool(n_task)
 
   bags = read_dir(bag_dir)
