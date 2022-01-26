@@ -27,7 +27,11 @@ python generate_traindata.py -b /to/data/dir/ -s /save/path
 
 
 
-
+运行vis
+```
+sudo apt-get install ffmpeg
+sudo apt-get install python3-tk
+```
 
 
 
